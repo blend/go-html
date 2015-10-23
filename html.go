@@ -61,14 +61,21 @@ func parseChildren(parentElement *Element, body []rune, cursor *int, tagStack *e
 
 		if read_tag.IsClose {
 			expected_tag := tagStack.Peek()
-			if expected_tag.ElementName == read_tag.ElementName {
-				tagStack.Pop()
-				parentElement.InnerHTML = string(body[parse_start:*cursor])
-				return nil
-			} else if shouldCheckElementStack {
-				error_text := fmt.Sprintf("unexpected close </%s> (expected </%s>) on line: %d", read_tag.ElementName, expected_tag.ElementName, countNewlinesBefore(string(body), *cursor))
-				error_text = error_text + fmt.Sprintf("\ncurrent path: %s", tagStack.ToString())
-				return errors.New(error_text)
+
+			if expected_tag == nil {
+				println("tagStack", tagStack.ToString())
+				println("parentElement", parentElement.ToString())
+				fmt.Printf("read_tag %v", read_tag)
+			} else {
+				if expected_tag.ElementName == read_tag.ElementName {
+					tagStack.Pop()
+					parentElement.InnerHTML = string(body[parse_start:*cursor])
+					return nil
+				} else if shouldCheckElementStack {
+					error_text := fmt.Sprintf("unexpected close </%s> (expected </%s>) on line: %d", read_tag.ElementName, expected_tag.ElementName, countNewlinesBefore(string(body), *cursor))
+					error_text = error_text + fmt.Sprintf("\ncurrent path: %s", tagStack.ToString())
+					return errors.New(error_text)
+				}
 			}
 		} else if read_tag.IsVoid {
 			parentElement.AddChild(read_tag)
@@ -730,6 +737,8 @@ func readTag(text []rune, cursor *int) (*Element, error) {
 
 	state := 0
 
+	parser_error := EMPTY
+
 	attr_name := EMPTY
 	attr_value := EMPTY
 	element_name := EMPTY
@@ -740,6 +749,7 @@ func readTag(text []rune, cursor *int) (*Element, error) {
 
 	for ; *cursor < len(text); *cursor++ {
 		c := text[*cursor]
+
 		switch state {
 		case 0: //read until tag begins
 			if c == '<' {
@@ -754,10 +764,8 @@ func readTag(text []rune, cursor *int) (*Element, error) {
 			} else if c == '/' {
 				elem.IsClose = true
 			} else if c == '>' {
-				*cursor = *cursor + 1
-				elem.ElementName = strings.ToLower(element_name)
-				elem.IsVoid = elem.IsVoid || isKnownVoidElement(elem.ElementName)
-				return &elem, errors.New("Empty tag similar to `<>` or `< >` or `</>`")
+				parser_error = "Empty tag similar to `<>` or `< >` or `</>`"
+				state = 1001
 			} else if !isWhitespace(c) {
 				state = 10
 				element_name = element_name + string(c)
@@ -766,11 +774,9 @@ func readTag(text []rune, cursor *int) (*Element, error) {
 		case 2: //read until end of tag
 			if c == '/' {
 				elem.IsVoid = true
+				state = 500
 			} else if c == '>' {
-				elem.ElementName = strings.ToLower(element_name)
-				elem.IsVoid = elem.IsVoid || isKnownVoidElement(elem.ElementName)
-				*cursor = *cursor + 1
-				return &elem, nil
+				state = 1000
 			} else if !isWhitespace(c) {
 				state = 100
 				element_name = element_name + string(c)
@@ -790,9 +796,8 @@ func readTag(text []rune, cursor *int) (*Element, error) {
 				elem.IsComment = true
 				state = 200 //consume xml comment
 			} else {
-				*cursor = *cursor + 1
-				elem.ElementName = strings.ToLower(element_name)
-				return &elem, errors.New("Almost an XML comment but not quite.")
+				parser_error = "Malformed XML comment"
+				state = 1001
 			}
 			break
 		case 10: //read elemName
@@ -801,15 +806,9 @@ func readTag(text []rune, cursor *int) (*Element, error) {
 			} else if c == '-' {
 				state = 11
 			} else if c == '>' {
-				elem.ElementName = strings.ToLower(element_name)
-				elem.IsVoid = elem.IsVoid || isKnownVoidElement(elem.ElementName)
-				*cursor = *cursor + 1
-				return &elem, nil
+				state = 1000
 			} else if c == '/' {
-				elem.IsVoid = true
-				*cursor = *cursor + 1
-				elem.ElementName = strings.ToLower(element_name)
-				return &elem, nil
+				state = 500
 			} else {
 				element_name = element_name + string(c)
 			}
@@ -817,14 +816,9 @@ func readTag(text []rune, cursor *int) (*Element, error) {
 		case 20: //read until attribute or end of tags
 			if c == '/' {
 				elem.IsVoid = true
-				*cursor = *cursor + 1
-				elem.ElementName = strings.ToLower(element_name)
-				return &elem, nil
+				state = 500
 			} else if c == '>' {
-				elem.ElementName = strings.ToLower(element_name)
-				elem.IsVoid = elem.IsVoid || isKnownVoidElement(elem.ElementName)
-				*cursor = *cursor + 1
-				return &elem, nil
+				state = 1000
 			} else if !isWhitespace(c) {
 				*cursor = *cursor - 1
 				state = 100
@@ -833,10 +827,12 @@ func readTag(text []rune, cursor *int) (*Element, error) {
 		case 100: //read attribute name
 			if c == '=' { //we are assigning an attribute value ...
 				state = 101
-			} else if c == '>' || c == '/' {
+			} else if c == '/' {
 				elem.Attributes[strings.ToLower(attr_name)] = EMPTY
-				*cursor = *cursor - 1
-				state = 20
+				state = 500
+			} else if c == '>' {
+				elem.Attributes[strings.ToLower(attr_name)] = EMPTY
+				state = 1000
 			} else if isWhitespace(c) {
 				elem.Attributes[strings.ToLower(attr_name)] = EMPTY
 				attr_name = ""
@@ -885,19 +881,23 @@ func readTag(text []rune, cursor *int) (*Element, error) {
 			break
 		case 201:
 			if c == '-' {
-				state = 202
+				state = 500
 			} else {
 				state = 200
 				elem.InnerHTML = elem.InnerHTML + string(c)
 			}
 			break
-		case 202:
+		case 500:
 			if c == '>' {
-				*cursor = *cursor + 1
-				elem.ElementName = strings.ToLower(element_name)
-				return &elem, nil
+				state = 1000
 			}
 			break
+		case 1000:
+			elem.ElementName = strings.ToLower(element_name)
+			elem.IsVoid = elem.IsVoid || isKnownVoidElement(elem.ElementName)
+			return &elem, nil
+		case 1001:
+			return &elem, errors.New(parser_error)
 		}
 	}
 
