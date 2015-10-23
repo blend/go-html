@@ -139,7 +139,7 @@ func TestParsingMocks(t *testing.T) {
 }
 
 func TestParsingInvalid(t *testing.T) {
-	_, parseError := Parse(SNIPPET_INVALID)
+	_, parseError := ParseStrict(SNIPPET_INVALID)
 	if parseError == nil {
 		t.Error("Should have errored.")
 		t.FailNow()
