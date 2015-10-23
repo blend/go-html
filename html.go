@@ -221,30 +221,38 @@ func (e Element) GetText() string {
 
 func (e Element) EqualTo(e2 Element) bool {
 	if e.ElementName != e2.ElementName {
+		fmt.Println("EqualTo fails on `ElementName`")
 		return false
 	}
 	if e.IsVoid != e2.IsVoid {
+		fmt.Println("EqualTo fails on `IsVoid`")
 		return false
 	}
 	if e.IsClose != e2.IsClose {
+		fmt.Println("EqualTo fails on `IsClose`")
 		return false
 	}
 	if e.InnerHTML != e2.InnerHTML {
+		fmt.Println("EqualTo fails on `InnerHTML`")
 		return false
 	}
 	if len(e.Children) != len(e2.Children) {
+		fmt.Println("EqualTo fails on `len(Children)`")
 		return false
 	}
 	if len(e.Attributes) != len(e2.Attributes) {
+		fmt.Println("EqualTo fails on `len(Attributes)`")
 		return false
 	}
 	if !reflect.DeepEqual(e.Attributes, e2.Attributes) {
+		fmt.Println("EqualTo fails on `DeepEqual(Attributes)`")
 		return false
 	}
 	for index := 0; index < len(e.Children); index++ {
 		childA := e.Children[index]
 		childB := e2.Children[index]
 		if !childA.EqualTo(childB) {
+			fmt.Println("EqualTo fails on `DeepEqual(Children)`")
 			return false
 		}
 	}
@@ -505,6 +513,7 @@ func readUntilScriptTagClose(text []rune, cursor *int, scriptType string) ([]run
 
 func readTag(text []rune, cursor *int) (*Element, error) {
 	elem := Element{}
+	elem.Attributes = map[string]string{}
 
 	state := 0
 
@@ -602,16 +611,10 @@ func readTag(text []rune, cursor *int) (*Element, error) {
 			if c == '=' {
 				state = 101
 			} else if c == '>' || c == '/' {
-				if elem.Attributes == nil {
-					elem.Attributes = map[string]string{}
-				}
-				elem.Attributes[attr_name] = ""
+				elem.Attributes[strings.ToLower(attr_name)] = ""
 				*cursor = *cursor - 1
 				state = 20
 			} else if isWhitespace(c) {
-				if elem.Attributes == nil {
-					elem.Attributes = map[string]string{}
-				}
 				elem.Attributes[strings.ToLower(attr_name)] = ""
 				attr_name = ""
 				attr_value = ""
@@ -626,13 +629,20 @@ func readTag(text []rune, cursor *int) (*Element, error) {
 				state = 102
 			} else if !isWhitespace(c) {
 				attr_value = attr_value + string(c)
-				state = 102
+				state = 103
 			}
 		case 102: //read attribute value
-			if isWhitespace(c) || c == quote_character {
-				if elem.Attributes == nil {
-					elem.Attributes = map[string]string{}
-				}
+			if c == quote_character {
+				elem.Attributes[strings.ToLower(attr_name)] = attr_value
+				attr_name = ""
+				attr_value = ""
+				state = 20
+			} else {
+				attr_value = attr_value + string(c)
+			}
+			break
+		case 103: //read attribute value
+			if isWhitespace(c) {
 				elem.Attributes[strings.ToLower(attr_name)] = attr_value
 				attr_name = ""
 				attr_value = ""

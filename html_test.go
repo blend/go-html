@@ -1,6 +1,7 @@
 package html
 
 import (
+	"fmt"
 	"io/ioutil"
 	"testing"
 )
@@ -85,6 +86,7 @@ func TestParsingMocks(t *testing.T) {
 	mock_files := []string{
 		"news.ycombinator.com.html",
 		"nytimes.com.html",
+		"blendlabs.clean.html",
 		"blendlabs.com.html",
 	}
 
@@ -93,6 +95,7 @@ func TestParsingMocks(t *testing.T) {
 		doc, parseError := Parse(corpus)
 
 		if parseError != nil {
+			fmt.Println(doc.Render())
 			t.Errorf("error with %s: %s", mock_file, parseError.Error())
 			t.FailNow()
 		}
@@ -185,7 +188,6 @@ func TestElementStack(t *testing.T) {
 		t.Error("stack count should be 2 after popping first element.")
 		t.FailNow()
 	}
-
 }
 
 func TestReadUntilTag(t *testing.T) {
@@ -311,19 +313,20 @@ func TestReadWhitespace(t *testing.T) {
 
 func TestReadTag(t *testing.T) {
 	testCases := map[string]Element{
-		"<!DOCTYPE>":                 Element{ElementName: "DOCTYPE", IsVoid: true},
+		"<!DOCTYPE>":                 Element{ElementName: "DOCTYPE", IsVoid: true, Attributes: map[string]string{}},
 		"<!DOCTYPE html>":            Element{ElementName: "DOCTYPE", IsVoid: true, Attributes: map[string]string{"html": ""}},
-		"<!-- this is a comment -->": Element{ElementName: "XML COMMENT", IsVoid: true, IsComment: true, InnerHTML: " this is a comment "},
-		"<br>":                                         Element{ElementName: "br", IsVoid: true},
-		"<br/>":                                        Element{ElementName: "br", IsVoid: true},
-		"</div>":                                       Element{ElementName: "div", IsVoid: false, IsClose: true},
-		"</ div>":                                      Element{ElementName: "div", IsVoid: false, IsClose: true},
-		"< /div>":                                      Element{ElementName: "div", IsVoid: false, IsClose: true},
-		"<div class=\"\">":                             Element{ElementName: "div", Attributes: map[string]string{"class": ""}},
-		"<div class=\"content\">":                      Element{ElementName: "div", Attributes: map[string]string{"class": "content"}},
-		"<div class=\"with='quotes'\">":                Element{ElementName: "div", Attributes: map[string]string{"class": "with='quotes'"}},
-		"<div class='with=\"escaped_quotes\"'>":        Element{ElementName: "div", Attributes: map[string]string{"class": "with=\"escaped_quotes\""}},
-		"<a class=\"my-link\" href=\"/test/route\" />": Element{ElementName: "a", IsVoid: true, Attributes: map[string]string{"class": "my-link", "href": "/test/route"}},
+		"<!-- this is a comment -->": Element{ElementName: "XML COMMENT", IsVoid: true, IsComment: true, InnerHTML: " this is a comment ", Attributes: map[string]string{}},
+		"<br>":                                                                    Element{ElementName: "br", IsVoid: true, Attributes: map[string]string{}},
+		"<br/>":                                                                   Element{ElementName: "br", IsVoid: true, Attributes: map[string]string{}},
+		"</div>":                                                                  Element{ElementName: "div", IsVoid: false, IsClose: true, Attributes: map[string]string{}},
+		"</ div>":                                                                 Element{ElementName: "div", IsVoid: false, IsClose: true, Attributes: map[string]string{}},
+		"< /div>":                                                                 Element{ElementName: "div", IsVoid: false, IsClose: true, Attributes: map[string]string{}},
+		"<div class=\"\">":                                                        Element{ElementName: "div", Attributes: map[string]string{"class": ""}},
+		"<div class=\"content\">":                                                 Element{ElementName: "div", Attributes: map[string]string{"class": "content"}},
+		"<div class=\"with='quotes'\">":                                           Element{ElementName: "div", Attributes: map[string]string{"class": "with='quotes'"}},
+		"<div class='with=\"escaped_quotes\"'>":                                   Element{ElementName: "div", Attributes: map[string]string{"class": "with=\"escaped_quotes\""}},
+		"<a class=\"my-link\" href=\"/test/route\" />":                            Element{ElementName: "a", IsVoid: true, Attributes: map[string]string{"class": "my-link", "href": "/test/route"}},
+		"<section class=\"module streamline-automate type-standard\" style=\"\">": Element{ElementName: "section", Attributes: map[string]string{"class": "module streamline-automate type-standard", "style": ""}},
 	}
 
 	for tag, expectedResult := range testCases {
