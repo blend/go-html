@@ -31,8 +31,9 @@ func parseChildren(parentElement *Element, body []rune, cursor *int, tagStack *e
 			return results_err
 		}
 
-		if len(results) != 0 {
-			parentElement.AddChild(newTextNode(results))
+		if len(results) > 0 && !isContinuousWhitespace(results) {
+			new_text_node := newTextNode(results)
+			parentElement.AddChild(new_text_node)
 		}
 
 		read_tag, read_tag_error := readTag(body, cursor)
@@ -48,7 +49,7 @@ func parseChildren(parentElement *Element, body []rune, cursor *int, tagStack *e
 				return nil
 			} else {
 				error_text := fmt.Sprintf("unexpected close </%s> (expected </%s>) on line: %d", read_tag.ElementName, expected_tag.ElementName, countNewlinesBefore(string(body), *cursor))
-				error_text = error_text + fmt.Sprintf("\ncurrent stack: %s", tagStack.ToString())
+				error_text = error_text + fmt.Sprintf("\ncurrent path: %s", tagStack.ToString())
 				return errors.New(error_text)
 			}
 		} else if read_tag.IsVoid {
@@ -66,11 +67,13 @@ func parseChildren(parentElement *Element, body []rune, cursor *int, tagStack *e
 				return script_error
 			}
 
-			read_tag.InnerHTML = string(script_contents)
+			script_body := newTextNode(script_contents)
+			read_tag.AddChild(script_body)
 			parentElement.AddChild(read_tag)
 		} else {
-			tagStack.Push(read_tag)
-			parse_children_error := parseChildren(&read_tag, body, cursor, tagStack)
+			new_stack := tagStack.Duplicate()
+			new_stack.Push(*read_tag)
+			parse_children_error := parseChildren(read_tag, body, cursor, new_stack)
 			parentElement.AddChild(read_tag)
 			if parse_children_error != nil {
 				return parse_children_error
@@ -93,8 +96,8 @@ func countNewlinesBefore(body string, cursorPosition int) int {
 	return count
 }
 
-func newTextNode(text []rune) Element {
-	return Element{ElementName: "text", IsText: true, IsVoid: true, InnerHTML: string(text)}
+func newTextNode(text []rune) *Element {
+	return &Element{ElementName: "text", IsText: true, IsVoid: true, InnerHTML: string(text)}
 }
 
 //--------------------------------------------------------------------------------
@@ -145,9 +148,9 @@ type Element struct {
 	IsData      bool
 }
 
-func (e *Element) AddChild(newChild Element) {
+func (e *Element) AddChild(newChild *Element) {
 	newChild.Parent = e
-	e.Children = append(e.Children, newChild)
+	e.Children = append(e.Children, *newChild)
 }
 
 func (e Element) Flatten() []Element {
@@ -251,15 +254,17 @@ func (e Element) EqualTo(e2 Element) bool {
 
 func (e Element) ToString() string {
 	if e.IsRoot {
-		return "ROOT"
+		return EMPTY
 	}
 
-	if e.IsText {
-		return e.InnerHTML
+	if e.IsText && isContinuousWhitespace([]rune(e.InnerHTML)) {
+		return EMPTY
+	} else if e.IsText {
+		return trimString(e.InnerHTML)
 	}
 
 	if e.IsComment {
-		return fmt.Sprintf("<!--%s-->", e.InnerHTML)
+		return fmt.Sprintf("<!--%s-->", trimString(e.InnerHTML))
 	}
 
 	if e.IsVoid {
@@ -276,7 +281,7 @@ func (e Element) ToString() string {
 		}
 	}
 
-	return fmt.Sprintf("<%s>", e.ElementName)
+	return EMPTY
 }
 
 func (e Element) NonTextChildren() []Element {
@@ -288,18 +293,31 @@ func (e Element) NonTextChildren() []Element {
 }
 
 func (e Element) Render() string {
-	return e.renderImpl(0)
+	if e.IsRoot {
+		str := EMPTY
+		for _, child := range e.Children {
+			str = str + child.renderImpl(0)
+		}
+		return str
+	} else {
+		return e.renderImpl(0)
+	}
 }
 
 func (e Element) renderImpl(nesting int) string {
-	str := e.ToString()
+
+	str := tabSequence(nesting) + e.ToString()
+
+	str = str + "\n"
+
 	for _, child := range e.Children {
-		childStr := child.renderImpl(nesting + 1)
-		str = str + childStr
+		str = str + child.renderImpl(nesting+1)
 	}
-	if !e.IsVoid && !e.IsRoot {
-		str = str + fmt.Sprintf("</%s>", e.ElementName)
+
+	if !(e.IsVoid || e.IsText || e.IsComment || e.IsRoot) {
+		str = str + tabSequence(nesting) + fmt.Sprintf("</%s>\n", e.ElementName)
 	}
+
 	return str
 }
 
@@ -340,7 +358,7 @@ func (es *elementStack) Pop() *Element {
 	return &toReturn
 }
 
-func (es *elementStack) Peek() *Element {
+func (es elementStack) Peek() *Element {
 	if es.Top == nil {
 		return nil
 	}
@@ -348,7 +366,6 @@ func (es *elementStack) Peek() *Element {
 }
 
 func (es *elementStack) ToString() string {
-
 	if es.Top == nil {
 		return "*"
 	}
@@ -361,6 +378,28 @@ func (es *elementStack) ToString() string {
 	}
 
 	return strings.Join(names, " > ")
+}
+
+func (es elementStack) Duplicate() *elementStack {
+	new_es := &elementStack{}
+
+	if es.Top == nil {
+		return new_es
+	}
+
+	nodes := []Element{}
+
+	nodePtr := es.Top
+	for nodePtr != nil {
+		nodes = append([]Element{nodePtr.Value}, nodes...)
+		nodePtr = nodePtr.Next
+	}
+
+	for _, node := range nodes {
+		new_es.Push(node)
+	}
+
+	return new_es
 }
 
 //--------------------------------------------------------------------------------
@@ -425,6 +464,7 @@ func readUntilScriptTagClose(text []rune, cursor *int, scriptType string) ([]run
 		case 12:
 			if c == '>' {
 				if strings.ToLower(working_tag) == "script" {
+					*cursor = *cursor + 1
 					return text[starting_position:tag_start], nil
 				}
 			} else if !isWhitespace(c) {
@@ -463,7 +503,7 @@ func readUntilScriptTagClose(text []rune, cursor *int, scriptType string) ([]run
 	return text[starting_position:*cursor], nil
 }
 
-func readTag(text []rune, cursor *int) (Element, error) {
+func readTag(text []rune, cursor *int) (*Element, error) {
 	elem := Element{}
 
 	state := 0
@@ -492,7 +532,7 @@ func readTag(text []rune, cursor *int) (Element, error) {
 				elem.IsClose = true
 			} else if c == '>' {
 				*cursor = *cursor + 1
-				return elem, errors.New("Empty tag similar to `<>` or `< >` or `</>`")
+				return &elem, errors.New("Empty tag similar to `<>` or `< >` or `</>`")
 			} else if !isWhitespace(c) {
 				state = 10
 				elem.ElementName = elem.ElementName + string(c)
@@ -504,7 +544,7 @@ func readTag(text []rune, cursor *int) (Element, error) {
 			} else if c == '>' {
 				elem.IsVoid = elem.IsVoid || isKnownVoidElement(elem.ElementName)
 				*cursor = *cursor + 1
-				return elem, nil
+				return &elem, nil
 			} else if !isWhitespace(c) {
 				state = 100
 				elem.ElementName = elem.ElementName + string(c)
@@ -524,7 +564,7 @@ func readTag(text []rune, cursor *int) (Element, error) {
 				state = 200 //consume xml comment
 			} else {
 				*cursor = *cursor + 1
-				return elem, errors.New("Almost an XML comment but not quite.")
+				return &elem, errors.New("Almost an XML comment but not quite.")
 			}
 			break
 		case 10: //read elemName
@@ -535,11 +575,11 @@ func readTag(text []rune, cursor *int) (Element, error) {
 			} else if c == '>' {
 				elem.IsVoid = elem.IsVoid || isKnownVoidElement(elem.ElementName)
 				*cursor = *cursor + 1
-				return elem, nil
+				return &elem, nil
 			} else if c == '/' {
 				elem.IsVoid = true
 				*cursor = *cursor + 1
-				return elem, nil
+				return &elem, nil
 			} else {
 				elem.ElementName = elem.ElementName + string(c)
 			}
@@ -548,11 +588,11 @@ func readTag(text []rune, cursor *int) (Element, error) {
 			if c == '/' {
 				elem.IsVoid = true
 				*cursor = *cursor + 1
-				return elem, nil
+				return &elem, nil
 			} else if c == '>' {
 				elem.IsVoid = elem.IsVoid || isKnownVoidElement(elem.ElementName)
 				*cursor = *cursor + 1
-				return elem, nil
+				return &elem, nil
 			} else if !isWhitespace(c) {
 				*cursor = *cursor - 1
 				state = 100
@@ -621,14 +661,14 @@ func readTag(text []rune, cursor *int) (Element, error) {
 		case 202:
 			if c == '>' {
 				*cursor = *cursor + 1
-				return elem, nil
+				return &elem, nil
 			}
 			break
 		}
 	}
 
 	elem.IsVoid = elem.IsVoid || isKnownVoidElement(elem.ElementName)
-	return elem, nil
+	return &elem, nil
 }
 
 func sliceContains(slice []string, value string) bool {
@@ -641,9 +681,9 @@ func sliceContains(slice []string, value string) bool {
 }
 
 func tabSequence(ofLength int) string {
-	tabs := ""
+	tabs := EMPTY
 	for i := 0; i < ofLength; i++ {
-		tabs = tabs + "\t"
+		tabs = tabs + "  "
 	}
 	return tabs
 }
@@ -673,6 +713,32 @@ func isContinuousWhitespace(corpus []rune) bool {
 		}
 	}
 	return true
+}
+
+func trimString(text string) string {
+	return string(trim([]rune(text)))
+}
+
+func trim(text []rune) []rune {
+	if len(text) == 0 {
+		return text
+	}
+
+	left := 0
+	for ; left < len(text); left++ {
+		c := text[left]
+		if !isWhitespace(c) {
+			break
+		}
+	}
+	right := len(text) - 1
+	for ; right > 0; right-- {
+		c := text[right]
+		if !isWhitespace(c) {
+			break
+		}
+	}
+	return text[left : right+1]
 }
 
 func isWhitespace(char rune) bool {

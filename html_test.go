@@ -91,6 +91,7 @@ func TestParsingMocks(t *testing.T) {
 	for _, mock_file := range mock_files {
 		corpus := readFileContents("mocks/" + mock_file)
 		doc, parseError := Parse(corpus)
+
 		if parseError != nil {
 			t.Errorf("error with %s: %s", mock_file, parseError.Error())
 			t.FailNow()
@@ -152,8 +153,20 @@ func TestElementStack(t *testing.T) {
 		t.FailNow()
 	}
 
+	duplicated := stack.Duplicate()
+	duplicated_stack_string := duplicated.ToString()
+	if stack_string != duplicated_stack_string {
+		t.Errorf("Duplicate() error: %s != %s", stack_string, duplicated_stack_string)
+		t.FailNow()
+	}
+
 	if stack.Peek().ElementName != "div" {
 		t.Error("top of stack is not a `div`")
+		t.FailNow()
+	}
+
+	if stack.Count != 3 {
+		t.Errorf("stack storage count is not 3, is: %d", stack.Count)
 		t.FailNow()
 	}
 
@@ -172,6 +185,7 @@ func TestElementStack(t *testing.T) {
 		t.Error("stack count should be 2 after popping first element.")
 		t.FailNow()
 	}
+
 }
 
 func TestReadUntilTag(t *testing.T) {
@@ -247,6 +261,17 @@ func TestReadUntilScriptTagClose(t *testing.T) {
 		comment and is annoying */
 		foo = 'baz';
 		`,
+		`
+			function hide(id) {
+				var el = document.getElementById(id);
+				if (el) { el.style.visibility = 'hidden'; }
+			}
+		</script>`: `
+			function hide(id) {
+				var el = document.getElementById(id);
+				if (el) { el.style.visibility = 'hidden'; }
+			}
+		`,
 	}
 
 	for test, expected := range test_cases {
@@ -294,6 +319,7 @@ func TestReadTag(t *testing.T) {
 		"</div>":                                       Element{ElementName: "div", IsVoid: false, IsClose: true},
 		"</ div>":                                      Element{ElementName: "div", IsVoid: false, IsClose: true},
 		"< /div>":                                      Element{ElementName: "div", IsVoid: false, IsClose: true},
+		"<div class=\"\">":                             Element{ElementName: "div", Attributes: map[string]string{"class": ""}},
 		"<div class=\"content\">":                      Element{ElementName: "div", Attributes: map[string]string{"class": "content"}},
 		"<div class=\"with='quotes'\">":                Element{ElementName: "div", Attributes: map[string]string{"class": "with='quotes'"}},
 		"<div class='with=\"escaped_quotes\"'>":        Element{ElementName: "div", Attributes: map[string]string{"class": "with=\"escaped_quotes\""}},
@@ -308,7 +334,7 @@ func TestReadTag(t *testing.T) {
 			t.Error(parseError.Error())
 			t.FailNow()
 		}
-		if !expectedResult.EqualTo(actualResult) {
+		if !expectedResult.EqualTo(*actualResult) {
 			t.Error("Invalid parsed tag results.")
 			t.Errorf("\tExpected : %s", expectedResult.ToString())
 			t.Errorf("\tActual   : %s", actualResult.ToString())
