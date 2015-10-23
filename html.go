@@ -285,6 +285,8 @@ var (
 // TYPES: ELEMENT
 //--------------------------------------------------------------------------------
 
+type ElementPredicate func(*Element) bool
+
 type Element struct {
 	ElementName string
 	Parent      *Element
@@ -302,6 +304,16 @@ type Element struct {
 func (e *Element) AddChild(newChild *Element) {
 	newChild.Parent = e
 	e.Children = append(e.Children, *newChild)
+}
+
+func (e Element) HasClass(className string) bool {
+	class_name_lower := strings.ToLower(className)
+	elem_class, elem_has_class_attr := e.Attributes["class"]
+	if elem_has_class_attr {
+		elem_class_pieces := strings.Split(strings.ToLower(elem_class), " ")
+		return sliceContains(elem_class_pieces, class_name_lower)
+	}
+	return false
 }
 
 func (e Element) Flatten() []Element {
@@ -327,20 +339,23 @@ func (e Element) GetElementsByTagName(tagName string) []Element {
 	return results
 }
 
+func (e Element) GetElementsByPredicate(predicate ElementPredicate) []Element {
+	results := []Element{}
+	for _, child := range e.Flatten() {
+		if predicate(&child) {
+			results = append(results, child)
+		}
+	}
+	return results
+}
+
 func (e Element) GetElementsByClassName(className string) []Element {
 	class_name_lower := strings.ToLower(className)
 	results := []Element{}
 	for _, child := range e.Flatten() {
-
-		child_class, child_has_class := child.Attributes["class"]
-
-		if child_has_class {
-			class_pieces := strings.Split(strings.ToLower(child_class), " ")
-			if sliceContains(class_pieces, class_name_lower) {
-				results = append(results, child)
-			}
+		if child.HasClass(class_name_lower) {
+			results = append(results, child)
 		}
-
 	}
 	return results
 }

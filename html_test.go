@@ -92,6 +92,15 @@ func TestParsingDocument(t *testing.T) {
 		t.Errorf(`GetElementsByClassName("highlight") count is %d, expected 2`, len(class_elements))
 		t.FailNow()
 	}
+
+	predicate_elements := doc.GetElementsByPredicate(func(e *Element) bool {
+		return e.Parent.ElementName == ELEMENT_DIV && e.Parent.HasClass("container")
+	})
+
+	if len(predicate_elements) == 0 {
+		t.Errorf("GetElementsByPredicate returned zero results")
+		t.FailNow()
+	}
 }
 
 func readFileContents(filename string) string {
