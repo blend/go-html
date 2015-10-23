@@ -21,15 +21,23 @@ func UnescapeString(s string) string {
 	return go_html.UnescapeString(s)
 }
 
+func ParseStrict(body string) (Element, error) {
+	parentElement := Element{IsRoot: true}
+	tagStack := &elementStack{}
+	cursor := 0
+	childrenError := parseChildren(&parentElement, []rune(body), &cursor, tagStack, true)
+	return parentElement, childrenError
+}
+
 func Parse(body string) (Element, error) {
 	parentElement := Element{IsRoot: true}
 	tagStack := &elementStack{}
 	cursor := 0
-	childrenError := parseChildren(&parentElement, []rune(body), &cursor, tagStack)
+	childrenError := parseChildren(&parentElement, []rune(body), &cursor, tagStack, false)
 	return parentElement, childrenError
 }
 
-func parseChildren(parentElement *Element, body []rune, cursor *int, tagStack *elementStack) error {
+func parseChildren(parentElement *Element, body []rune, cursor *int, tagStack *elementStack, shouldCheckElementStack bool) error {
 	if len(body) == 0 {
 		return nil
 	}
@@ -57,7 +65,7 @@ func parseChildren(parentElement *Element, body []rune, cursor *int, tagStack *e
 				tagStack.Pop()
 				//parentElement.InnerHTML = string(body[parse_start:*cursor])
 				return nil
-			} else {
+			} else if shouldCheckElementStack {
 				error_text := fmt.Sprintf("unexpected close </%s> (expected </%s>) on line: %d", read_tag.ElementName, expected_tag.ElementName, countNewlinesBefore(string(body), *cursor))
 				error_text = error_text + fmt.Sprintf("\ncurrent path: %s", tagStack.ToString())
 				return errors.New(error_text)
