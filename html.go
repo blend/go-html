@@ -91,7 +91,7 @@ func parseChildren(parentElement *Element, body []rune, cursor *int, tagStack *e
 		} else {
 			new_stack := tagStack.Duplicate()
 			new_stack.Push(*read_tag)
-			parse_children_error := parseChildren(read_tag, body, cursor, new_stack)
+			parse_children_error := parseChildren(read_tag, body, cursor, new_stack, shouldCheckElementStack)
 			parentElement.AddChild(read_tag)
 			if parse_children_error != nil {
 				return parse_children_error
