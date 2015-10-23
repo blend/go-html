@@ -62,21 +62,16 @@ func parseChildren(parentElement *Element, body []rune, cursor *int, tagStack *e
 		if read_tag.IsClose {
 			expected_tag := tagStack.Peek()
 
-			if expected_tag == nil {
-				println("tagStack", tagStack.ToString())
-				println("parentElement", parentElement.ToString())
-				fmt.Printf("read_tag %v", read_tag)
-			} else {
-				if expected_tag.ElementName == read_tag.ElementName {
-					tagStack.Pop()
-					parentElement.InnerHTML = string(body[parse_start:*cursor])
-					return nil
-				} else if shouldCheckElementStack {
-					error_text := fmt.Sprintf("unexpected close </%s> (expected </%s>) on line: %d", read_tag.ElementName, expected_tag.ElementName, countNewlinesBefore(string(body), *cursor))
-					error_text = error_text + fmt.Sprintf("\ncurrent path: %s", tagStack.ToString())
-					return errors.New(error_text)
-				}
+			if expected_tag.ElementName == read_tag.ElementName {
+				tagStack.Pop()
+				parentElement.InnerHTML = string(body[parse_start:*cursor])
+				return nil
+			} else if shouldCheckElementStack {
+				error_text := fmt.Sprintf("unexpected close </%s> (expected </%s>) on line: %d", read_tag.ElementName, expected_tag.ElementName, countNewlinesBefore(string(body), *cursor))
+				error_text = error_text + fmt.Sprintf("\ncurrent path: %s", tagStack.ToString())
+				return errors.New(error_text)
 			}
+
 		} else if read_tag.IsVoid {
 			parentElement.AddChild(read_tag)
 		} else if read_tag.ElementName == "script" { //script tags are a black hole of misery and pain.
