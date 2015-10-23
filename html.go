@@ -102,18 +102,6 @@ func parseChildren(parentElement *Element, body []rune, cursor *int, tagStack *e
 	return nil
 }
 
-func countNewlinesBefore(body string, cursorPosition int) int {
-	count := 0
-	for x := 0; x < cursorPosition; x++ {
-		c := body[x]
-		if c == '\n' {
-			count++
-		}
-	}
-
-	return count
-}
-
 func newTextNode(text []rune) *Element {
 	return &Element{ElementName: ELEMENT_INTERNAL_TEXT, IsText: true, IsVoid: true, InnerHTML: string(text)}
 }
@@ -322,6 +310,53 @@ type Element struct {
 func (e *Element) AddChild(newChild *Element) {
 	newChild.Parent = e
 	e.Children = append(e.Children, *newChild)
+}
+
+func (e *Element) AddClass(className string) {
+	class_name_lower := strings.ToLower(className)
+
+	elem_class, elem_has_class_attr := e.Attributes["class"]
+	if elem_has_class_attr {
+		e.Attributes["class"] = fmt.Sprintf("%s %s", elem_class, class_name_lower)
+	} else {
+		e.Attributes["class"] = class_name_lower
+	}
+}
+
+func (e *Element) SetId(id string) {
+	e.Attributes["id"] = id
+}
+
+func (e Element) GetId() string {
+	elem_id, elem_has_id_attr := e.Attributes["id"]
+	if elem_has_id_attr {
+		return elem_id
+	} else {
+		return EMPTY
+	}
+}
+
+func (e Element) GetInnerText() string {
+	text := EMPTY
+	for _, child := range e.Flatten() {
+		if child.IsText {
+			text = text + child.InnerHTML
+		}
+	}
+
+	return text
+}
+
+func (e Element) GetPath() []Element {
+	elements := []Element{}
+
+	node_ptr := e.Parent
+	for node_ptr != nil && !node_ptr.IsRoot {
+		elements = append(elements, *node_ptr)
+		node_ptr = node_ptr.Parent
+	}
+
+	return elements
 }
 
 func (e Element) HasClass(className string) bool {
@@ -917,6 +952,18 @@ func isContinuousWhitespace(corpus []rune) bool {
 
 func trimString(text string) string {
 	return string(trim([]rune(text)))
+}
+
+func countNewlinesBefore(body string, cursorPosition int) int {
+	count := 0
+	for x := 0; x < cursorPosition; x++ {
+		c := body[x]
+		if c == '\n' {
+			count++
+		}
+	}
+
+	return count
 }
 
 func trim(text []rune) []rune {

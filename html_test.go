@@ -21,7 +21,7 @@ const SAMPLE_DOC = `
 	</head>
 	<body>
 		<div class="container">
-			<h1>Hello World!</h1>
+			<h1 id="my-header">Hello World!</h1>
 			<a href="/internal" class="my-link-class highlight">Test Internal Link</a>
 			<a href="http://test/external" class="highlight" target="_blank">Test External Link</a>
 		</div>
@@ -101,11 +101,23 @@ func TestParsingDocument(t *testing.T) {
 		t.Errorf("GetElementsByPredicate returned zero results")
 		t.FailNow()
 	}
-}
 
-func readFileContents(filename string) string {
-	reader, _ := ioutil.ReadFile(filename)
-	return string(reader)
+	sample_element := predicate_elements[0]
+	sample_element_path := sample_element.GetPath()
+	if len(sample_element_path) == 0 {
+		t.Error("GetPath() produced a 0 length path.")
+		t.FailNow()
+	}
+
+	header := doc.GetElementById("my-header")
+	if header == nil {
+		t.Error("GetElementById() returned a nil header")
+		t.FailNow()
+	}
+	if header.GetId() != "my-header" {
+		t.Error("GetElementById() returned an element with the wrong Id")
+		t.FailNow()
+	}
 }
 
 func TestParsingMocks(t *testing.T) {
@@ -122,17 +134,6 @@ func TestParsingMocks(t *testing.T) {
 
 		if parseError != nil {
 			t.Errorf("error with %s: %s", mock_file, parseError.Error())
-			t.FailNow()
-		}
-
-		if len(doc.NonTextChildren()) == 0 {
-			t.Error("doc children length is 0")
-			t.FailNow()
-		}
-
-		textElements := doc.GetElementsByTagName("text")
-		if len(textElements) == 0 {
-			t.Error("`text` element count is 0")
 			t.FailNow()
 		}
 	}
@@ -400,4 +401,23 @@ func TestReadTag(t *testing.T) {
 			t.Fail()
 		}
 	}
+}
+
+func TestGetInnerText(t *testing.T) {
+	document, _ := Parse(SNIPPET)
+	text := document.GetInnerText()
+	if len(text) == 0 {
+		t.Error("GetInnerText() produced 0 length text")
+		t.FailNow()
+	}
+
+	if text != "Test!Test 2!" {
+		t.Errorf("GetInnerText() produced the wrong text: %s", text)
+		t.FailNow()
+	}
+}
+
+func readFileContents(filename string) string {
+	reader, _ := ioutil.ReadFile(filename)
+	return string(reader)
 }
