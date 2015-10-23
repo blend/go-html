@@ -5,11 +5,21 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+
+	go_html "html"
 )
 
 //--------------------------------------------------------------------------------
 // MAIN EXPORTED METHODS
 //--------------------------------------------------------------------------------
+
+func EscapeString(s string) string {
+	return go_html.EscapeString(s)
+}
+
+func UnescapeString(s string) string {
+	return go_html.UnescapeString(s)
+}
 
 func Parse(body string) (Element, error) {
 	parentElement := Element{IsRoot: true}
