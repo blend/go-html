@@ -1,7 +1,6 @@
 package html
 
 import (
-	"fmt"
 	"io/ioutil"
 	"testing"
 )
@@ -23,8 +22,8 @@ const SAMPLE_DOC = `
 	<body>
 		<div class="container">
 			<h1>Hello World!</h1>
-			<a href="/internal" class="my-link-class blink">Test Internal Link</a>
-			<a href="http://test/external" target="_blank">Test External Link</a>
+			<a href="/internal" class="my-link-class highlight">Test Internal Link</a>
+			<a href="http://test/external" class="highlight" target="_blank">Test External Link</a>
 		</div>
 		<div class="footer">
 			<!-- XML COMMENTS BITCHES. -->
@@ -48,20 +47,20 @@ func TestParsingSnippet(t *testing.T) {
 	}
 
 	if doc.Children[0].Attributes["id"] != "first" {
-		t.Errorf("Invalid first child:%s", doc.Children[0].ToString())
+		t.Errorf("Invalid first child: %s", doc.Children[0].ToString())
 		t.FailNow()
 	}
 
 	if doc.Children[1].Attributes["id"] != "second" {
-		t.Errorf("Invalid first child:%s", doc.Children[1].ToString())
+		t.Errorf("Invalid first child: %s", doc.Children[1].ToString())
 		t.FailNow()
 	}
 }
 
 func TestParsingDocument(t *testing.T) {
-	doc, parseError := Parse(SAMPLE_DOC)
-	if parseError != nil {
-		t.Error(parseError.Error())
+	doc, parse_eror := Parse(SAMPLE_DOC)
+	if parse_eror != nil {
+		t.Error(parse_eror.Error())
 		t.FailNow()
 	}
 
@@ -70,9 +69,27 @@ func TestParsingDocument(t *testing.T) {
 		t.FailNow()
 	}
 
-	textElements := doc.GetElementsByTagName("text")
-	if len(textElements) == 0 {
+	text_elements := doc.GetElementsByTagName("text")
+	if len(text_elements) == 0 {
 		t.Error("`text` element count is 0")
+		t.FailNow()
+	}
+
+	div_elements := doc.GetElementsByTagName(ELEMENT_DIV)
+	if len(div_elements) != 2 {
+		t.Errorf(`GetElementsByTagName("div") count is %d, expected 2`, len(div_elements))
+		t.FailNow()
+	}
+
+	a_elements := doc.GetElementsByTagName(ELEMENT_A)
+	if len(a_elements) != 2 {
+		t.Errorf(`GetElementsByTagName("a") count is %d, expected 2`, len(a_elements))
+		t.FailNow()
+	}
+
+	class_elements := doc.GetElementsByClassName("highlight")
+	if len(class_elements) != 2 {
+		t.Errorf(`GetElementsByClassName("highlight") count is %d, expected 2`, len(class_elements))
 		t.FailNow()
 	}
 }
@@ -95,7 +112,6 @@ func TestParsingMocks(t *testing.T) {
 		doc, parseError := Parse(corpus)
 
 		if parseError != nil {
-			fmt.Println(doc.Render())
 			t.Errorf("error with %s: %s", mock_file, parseError.Error())
 			t.FailNow()
 		}
@@ -311,22 +327,53 @@ func TestReadWhitespace(t *testing.T) {
 	}
 }
 
+func TestElementEqualTo(t *testing.T) {
+	reference := Element{ElementName: ELEMENT_A, IsVoid: false, IsComment: false, Attributes: map[string]string{"href": "home.html", "class": "content"}}
+
+	correct := Element{ElementName: ELEMENT_A, IsVoid: false, IsComment: false, Attributes: map[string]string{"href": "home.html", "class": "content"}}
+
+	href_wrong := Element{ElementName: ELEMENT_A, IsVoid: false, IsComment: false, Attributes: map[string]string{"href": "home2.html", "class": "content"}}
+	element_name_wrong := Element{ElementName: ELEMENT_DIV, IsVoid: false, IsComment: false, Attributes: map[string]string{"href": "home.html", "class": "content"}}
+	class_wrong := Element{ElementName: ELEMENT_DIV, IsVoid: false, IsComment: false, Attributes: map[string]string{"href": "home.html", "class": "not-content"}}
+
+	if !reference.EqualTo(correct) {
+		t.Error("EqualTo failed for correct case.")
+		t.FailNow()
+	}
+
+	if reference.EqualTo(href_wrong) {
+		t.Error("EqualTo failed for attribute 'href' case.")
+		t.FailNow()
+	}
+
+	if reference.EqualTo(element_name_wrong) {
+		t.Error("EqualTo failed for attribute `ElementName` case.")
+		t.FailNow()
+	}
+
+	if reference.EqualTo(class_wrong) {
+		t.Error("EqualTo failed for attribute attribute `class` case.")
+		t.FailNow()
+	}
+}
+
 func TestReadTag(t *testing.T) {
 	testCases := map[string]Element{
-		"<!DOCTYPE>":                 Element{ElementName: "DOCTYPE", IsVoid: true, Attributes: map[string]string{}},
-		"<!DOCTYPE html>":            Element{ElementName: "DOCTYPE", IsVoid: true, Attributes: map[string]string{"html": ""}},
-		"<!-- this is a comment -->": Element{ElementName: "XML COMMENT", IsVoid: true, IsComment: true, InnerHTML: " this is a comment ", Attributes: map[string]string{}},
-		"<br>":                                                                    Element{ElementName: "br", IsVoid: true, Attributes: map[string]string{}},
-		"<br/>":                                                                   Element{ElementName: "br", IsVoid: true, Attributes: map[string]string{}},
-		"</div>":                                                                  Element{ElementName: "div", IsVoid: false, IsClose: true, Attributes: map[string]string{}},
-		"</ div>":                                                                 Element{ElementName: "div", IsVoid: false, IsClose: true, Attributes: map[string]string{}},
-		"< /div>":                                                                 Element{ElementName: "div", IsVoid: false, IsClose: true, Attributes: map[string]string{}},
-		"<div class=\"\">":                                                        Element{ElementName: "div", Attributes: map[string]string{"class": ""}},
-		"<div class=\"content\">":                                                 Element{ElementName: "div", Attributes: map[string]string{"class": "content"}},
-		"<div class=\"with='quotes'\">":                                           Element{ElementName: "div", Attributes: map[string]string{"class": "with='quotes'"}},
-		"<div class='with=\"escaped_quotes\"'>":                                   Element{ElementName: "div", Attributes: map[string]string{"class": "with=\"escaped_quotes\""}},
-		"<a class=\"my-link\" href=\"/test/route\" />":                            Element{ElementName: "a", IsVoid: true, Attributes: map[string]string{"class": "my-link", "href": "/test/route"}},
-		"<section class=\"module streamline-automate type-standard\" style=\"\">": Element{ElementName: "section", Attributes: map[string]string{"class": "module streamline-automate type-standard", "style": ""}},
+		"<!DOCTYPE>":                 Element{ElementName: ELEMENT_DOCTYPE, IsVoid: true, Attributes: map[string]string{}},
+		"<!DOCTYPE html>":            Element{ElementName: ELEMENT_DOCTYPE, IsVoid: true, Attributes: map[string]string{"html": ""}},
+		"<!-- this is a comment -->": Element{ElementName: ELEMENT_INTERNAL_XML_COMMENT, IsVoid: true, IsComment: true, InnerHTML: " this is a comment ", Attributes: map[string]string{}},
+		"<br>":                                                                    Element{ElementName: ELEMENT_BR, IsVoid: true, Attributes: map[string]string{}},
+		"<br/>":                                                                   Element{ElementName: ELEMENT_BR, IsVoid: true, Attributes: map[string]string{}},
+		"</div>":                                                                  Element{ElementName: ELEMENT_DIV, IsVoid: false, IsClose: true, Attributes: map[string]string{}},
+		"</ div>":                                                                 Element{ElementName: ELEMENT_DIV, IsVoid: false, IsClose: true, Attributes: map[string]string{}},
+		"< /div>":                                                                 Element{ElementName: ELEMENT_DIV, IsVoid: false, IsClose: true, Attributes: map[string]string{}},
+		"<div class=\"\">":                                                        Element{ElementName: ELEMENT_DIV, Attributes: map[string]string{"class": ""}},
+		"<div class=\"content\">":                                                 Element{ElementName: ELEMENT_DIV, Attributes: map[string]string{"class": "content"}},
+		"<div class=\"with='quotes'\">":                                           Element{ElementName: ELEMENT_DIV, Attributes: map[string]string{"class": "with='quotes'"}},
+		"<div class='with=\"escaped_quotes\"'>":                                   Element{ElementName: ELEMENT_DIV, Attributes: map[string]string{"class": "with=\"escaped_quotes\""}},
+		"<a class=\"my-link\" href=\"/test/route\" />":                            Element{ElementName: ELEMENT_A, IsVoid: true, Attributes: map[string]string{"class": "my-link", "href": "/test/route"}},
+		"<section class=\"module streamline-automate type-standard\" style=\"\">": Element{ElementName: ELEMENT_SECTION, Attributes: map[string]string{"class": "module streamline-automate type-standard", "style": ""}},
+		`<a href="http://test/external" class="highlight" target="_blank">`:       Element{ElementName: ELEMENT_A, Attributes: map[string]string{"href": "http://test/external", "class": "highlight", "target": "_blank"}},
 	}
 
 	for tag, expectedResult := range testCases {

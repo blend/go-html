@@ -24,7 +24,7 @@ func parseChildren(parentElement *Element, body []rune, cursor *int, tagStack *e
 		return nil
 	}
 
-	parse_start := *cursor
+	//parse_start := *cursor
 	for *cursor < len(body) {
 		results, results_err := readUntilTag(body, cursor)
 		if results_err != nil {
@@ -45,7 +45,7 @@ func parseChildren(parentElement *Element, body []rune, cursor *int, tagStack *e
 			expected_tag := tagStack.Peek()
 			if expected_tag.ElementName == read_tag.ElementName {
 				tagStack.Pop()
-				parentElement.InnerHTML = string(body[parse_start:*cursor])
+				//parentElement.InnerHTML = string(body[parse_start:*cursor])
 				return nil
 			} else {
 				error_text := fmt.Sprintf("unexpected close </%s> (expected </%s>) on line: %d", read_tag.ElementName, expected_tag.ElementName, countNewlinesBefore(string(body), *cursor))
@@ -80,7 +80,7 @@ func parseChildren(parentElement *Element, body []rune, cursor *int, tagStack *e
 			}
 		}
 	}
-	parentElement.InnerHTML = string(body[parse_start:*cursor])
+	//parentElement.InnerHTML = string(body[parse_start:*cursor])
 	return nil
 }
 
@@ -97,7 +97,7 @@ func countNewlinesBefore(body string, cursorPosition int) int {
 }
 
 func newTextNode(text []rune) *Element {
-	return &Element{ElementName: "text", IsText: true, IsVoid: true, InnerHTML: string(text)}
+	return &Element{ElementName: ELEMENT_INTERNAL_TEXT, IsText: true, IsVoid: true, InnerHTML: string(text)}
 }
 
 //--------------------------------------------------------------------------------
@@ -106,27 +106,178 @@ func newTextNode(text []rune) *Element {
 
 const (
 	EMPTY = ""
+
+	ELEMENT_INTERNAL_XML_COMMENT = "xmlcomment"
+	ELEMENT_INTERNAL_ROOT        = "root"
+	ELEMENT_INTERNAL_TEXT        = "text"
+
+	//note, the following sourced from https://developer.mozilla.org/en-US/docs/Web/HTML/Element
+	ELEMENT_DOCTYPE = "doctype"
+
+	ELEMENT_HTML = "html"
+
+	ELEMENT_HEAD = "head"
+	ELEMENT_BODY = "body"
+
+	ELEMENT_TITLE = "title"
+	ELEMENT_META  = "meta"
+	ELEMENT_BASE  = "base"
+	ELEMENT_LINK  = "link"
+	ELEMENT_STYLE = "style"
+
+	ELEMENT_ADDRESS = "address"
+	ELEMENT_ARTICLE = "article"
+	ELEMENT_NAV     = "nav"
+	ELEMENT_SECTION = "section"
+
+	ELEMENT_H1     = "h1"
+	ELEMENT_H2     = "h2"
+	ELEMENT_H3     = "h3"
+	ELEMENT_H4     = "h4"
+	ELEMENT_H5     = "h5"
+	ELEMENT_H6     = "h6"
+	ELEMENT_HGROUP = "hgroup"
+
+	ELEMENT_DD         = "dd"
+	ELEMENT_DIV        = "div"
+	ELEMENT_DL         = "dl"
+	ELEMENT_FIGCAPTION = "figcaption"
+	ELEMENT_HR         = "hr"
+	ELEMENT_LI         = "li"
+	ELEMENT_MAIN       = "main"
+	ELEMENT_OL         = "ol"
+	ELEMENT_P          = "p"
+	ELEMENT_PRE        = "pre"
+	ELEMENT_UL         = "ul"
+
+	ELEMENT_ABBR   = "abbr"
+	ELEMENT_B      = "b"
+	ELEMENT_BDI    = "bdi"
+	ELEMENT_BR     = "br"
+	ELEMENT_CITE   = "cite"
+	ELEMENT_CODE   = "code"
+	ELEMENT_DATA   = "data"
+	ELEMENT_DFN    = "dfn"
+	ELEMENT_EM     = "em"
+	ELEMENT_I      = "i"
+	ELEMENT_KBD    = "kbd"
+	ELEMENT_MARK   = "mark"
+	ELEMENT_Q      = "q"
+	ELEMENT_RP     = "rp"
+	ELEMENT_RT     = "rt"
+	ELEMENT_RTC    = "rtc"
+	ELEMENT_S      = "s"
+	ELEMENT_SAMP   = "samp"
+	ELEMENT_SMALL  = "small"
+	ELEMENT_SPAN   = "span"
+	ELEMENT_STRONG = "strong"
+	ELEMENT_SUB    = "sub"
+	ELEMENT_SUP    = "sup"
+	ELEMENT_TIME   = "time"
+	ELEMENT_U      = "u"
+	ELEMENT_VAR    = "var"
+	ELEMENT_WBR    = "wbr" //"word break opportunity". fasc.
+
+	ELEMENT_AREA  = "area"
+	ELEMENT_AUDIO = "audio"
+	ELEMENT_MAP   = "map"
+	ELEMENT_TRACK = "track"
+	ELEMENT_VIDEO = "video"
+
+	ELEMENT_A      = "a"
+	ELEMENT_IMG    = "img"
+	ELEMENT_IFRAME = "iframe"
+
+	ELEMENT_EMBED  = "embed"
+	ELEMENT_OBJECT = "object"
+	ELEMENT_PARAM  = "param"
+	ELEMENT_SOURCE = "source"
+
+	ELEMENT_CANVAS   = "canvas"
+	ELEMENT_NOSCRIPT = "noscript"
+	ELEMENT_SCRIPT   = "script"
+
+	ELEMENT_DEL = "del"
+	ELEMENT_INS = "ins"
+
+	ELEMENT_CAPTION  = "caption"
+	ELEMENT_COL      = "col"
+	ELEMENT_COLGROUP = "colgroup"
+	ELEMENT_TABLE    = "table"
+	ELEMENT_THEAD    = "thead"
+	ELEMENT_TBODY    = "tbody"
+	ELEMENT_TFOOT    = "tfoot"
+	ELEMENT_TH       = "th"
+	ELEMENT_TR       = "tr"
+	ELEMENT_TD       = "td"
+
+	ELEMENT_BUTTON   = "button"
+	ELEMENT_DATALIST = "datalist"
+	ELEMENT_FIELDSET = "fieldset"
+	ELEMENT_FORM     = "form"
+	ELEMENT_INPUT    = "input"
+	ELEMENT_KEYGEN   = "keygen"
+	ELEMENT_LABEL    = "label"
+	ELEMENT_LEGEND   = "legend"
+	ELEMENT_METER    = "meter"
+	ELEMENT_OPTGROUP = "optgroup"
+	ELEMENT_OPTION   = "option"
+	ELEMENT_OUTPUT   = "output"
+	ELEMENT_PROGRESS = "progress"
+	ELEMENT_SELECT   = "select"
+
+	ELEMENT_DETAILS  = "details"
+	ELEMENT_DIALOG   = "dialog"
+	ELEMENT_MENU     = "menu"
+	ELEMENT_MENUITEM = "menuitem"
+	ELEMENT_SUMMARY  = "summary"
+
+	ELEMENT_CONTENT   = "content"
+	ELEMENT_DECORATOR = "decorator"
+	ELEMENT_SHADOW    = "shadow"
+	ELEMENT_TEMPLATE  = "template"
 )
 
-//known void elements
 var (
 	KNOWN_VOID_ELEMENTS = map[string]bool{
-		"area":     true,
-		"base":     true,
-		"br":       true,
-		"col":      true,
-		"embed":    true,
-		"hr":       true,
-		"img":      true,
-		"input":    true,
-		"keygen":   true,
-		"link":     true,
-		"menuitem": true,
-		"meta":     true,
-		"param":    true,
-		"source":   true,
-		"track":    true,
-		"wbr":      true,
+		ELEMENT_AREA:     true,
+		ELEMENT_BASE:     true,
+		ELEMENT_BR:       true,
+		ELEMENT_COL:      true,
+		ELEMENT_EMBED:    true,
+		ELEMENT_HR:       true,
+		ELEMENT_IMG:      true,
+		ELEMENT_INPUT:    true,
+		ELEMENT_KEYGEN:   true,
+		ELEMENT_LINK:     true,
+		ELEMENT_MENUITEM: true,
+		ELEMENT_META:     true,
+		ELEMENT_PARAM:    true,
+		ELEMENT_SOURCE:   true,
+		ELEMENT_TRACK:    true,
+		ELEMENT_WBR:      true,
+	}
+
+	ALL_ELEMENTS = []string{
+		ELEMENT_HTML, ELEMENT_HEAD, ELEMENT_BODY, ELEMENT_TITLE, ELEMENT_META,
+		ELEMENT_BASE, ELEMENT_LINK, ELEMENT_STYLE, ELEMENT_ADDRESS, ELEMENT_ARTICLE,
+		ELEMENT_NAV, ELEMENT_SECTION, ELEMENT_H1, ELEMENT_H2, ELEMENT_H3, ELEMENT_H4,
+		ELEMENT_H5, ELEMENT_H6, ELEMENT_HGROUP, ELEMENT_DD, ELEMENT_DIV, ELEMENT_DL,
+		ELEMENT_FIGCAPTION, ELEMENT_HR, ELEMENT_LI, ELEMENT_MAIN, ELEMENT_OL, ELEMENT_P,
+		ELEMENT_PRE, ELEMENT_UL, ELEMENT_ABBR, ELEMENT_B, ELEMENT_BDI, ELEMENT_BR,
+		ELEMENT_CITE, ELEMENT_CODE, ELEMENT_DATA, ELEMENT_DFN, ELEMENT_EM, ELEMENT_I,
+		ELEMENT_KBD, ELEMENT_MARK, ELEMENT_Q, ELEMENT_RP, ELEMENT_RT, ELEMENT_RTC,
+		ELEMENT_S, ELEMENT_SAMP, ELEMENT_SMALL, ELEMENT_SPAN, ELEMENT_STRONG, ELEMENT_SUB,
+		ELEMENT_SUP, ELEMENT_TIME, ELEMENT_U, ELEMENT_VAR, ELEMENT_WBR, ELEMENT_AREA,
+		ELEMENT_AUDIO, ELEMENT_MAP, ELEMENT_TRACK, ELEMENT_VIDEO, ELEMENT_IMG, ELEMENT_IFRAME,
+		ELEMENT_EMBED, ELEMENT_OBJECT, ELEMENT_PARAM, ELEMENT_SOURCE, ELEMENT_CANVAS,
+		ELEMENT_NOSCRIPT, ELEMENT_SCRIPT, ELEMENT_DEL, ELEMENT_INS, ELEMENT_CAPTION,
+		ELEMENT_COL, ELEMENT_COLGROUP, ELEMENT_TABLE, ELEMENT_THEAD, ELEMENT_TBODY, ELEMENT_TFOOT,
+		ELEMENT_TH, ELEMENT_TR, ELEMENT_TD, ELEMENT_BUTTON, ELEMENT_DATALIST, ELEMENT_FIELDSET,
+		ELEMENT_FORM, ELEMENT_INPUT, ELEMENT_KEYGEN, ELEMENT_LABEL, ELEMENT_LEGEND, ELEMENT_METER,
+		ELEMENT_OPTGROUP, ELEMENT_OPTION, ELEMENT_OUTPUT, ELEMENT_PROGRESS, ELEMENT_SELECT,
+		ELEMENT_DETAILS, ELEMENT_DIALOG, ELEMENT_MENU, ELEMENT_MENUITEM, ELEMENT_SUMMARY,
+		ELEMENT_CONTENT, ELEMENT_DECORATOR, ELEMENT_SHADOW, ELEMENT_TEMPLATE, ELEMENT_A,
 	}
 )
 
@@ -155,22 +306,21 @@ func (e *Element) AddChild(newChild *Element) {
 
 func (e Element) Flatten() []Element {
 	results := []Element{}
-	for _, parent := range e.Children {
-		results = append(results, parent)
-		for _, child := range parent.Children {
-			for _, childElement := range child.Flatten() {
-				results = append(results, childElement)
-			}
+	for _, child := range e.Children {
+		results = append(results, child)
+		for _, sub_child := range child.Flatten() {
+			results = append(results, sub_child)
 		}
 	}
+
 	return results
 }
 
 func (e Element) GetElementsByTagName(tagName string) []Element {
-	tagNameLower := strings.ToLower(tagName)
+	tag_name_lower := strings.ToLower(tagName)
 	results := []Element{}
 	for _, child := range e.Flatten() {
-		if tagNameLower == strings.ToLower(child.ElementName) {
+		if tag_name_lower == strings.ToLower(child.ElementName) {
 			results = append(results, child)
 		}
 	}
@@ -178,13 +328,19 @@ func (e Element) GetElementsByTagName(tagName string) []Element {
 }
 
 func (e Element) GetElementsByClassName(className string) []Element {
-	classNameLower := strings.ToLower(className)
+	class_name_lower := strings.ToLower(className)
 	results := []Element{}
 	for _, child := range e.Flatten() {
-		pieces := strings.Split(strings.ToLower(child.Attributes["class"]), " ")
-		if sliceContains(pieces, classNameLower) {
-			results = append(results, child)
+
+		child_class, child_has_class := child.Attributes["class"]
+
+		if child_has_class {
+			class_pieces := strings.Split(strings.ToLower(child_class), " ")
+			if sliceContains(class_pieces, class_name_lower) {
+				results = append(results, child)
+			}
 		}
+
 	}
 	return results
 }
@@ -211,7 +367,7 @@ func (e Element) QuerySelector(cssSelectorQuery string) ([]Element, error) {
 }
 
 func (e Element) GetText() string {
-	textElements := e.GetElementsByTagName("text")
+	textElements := e.GetElementsByTagName(ELEMENT_INTERNAL_TEXT)
 	textElementBodies := []string{}
 	for _, textElement := range textElements {
 		textElementBodies = append(textElementBodies, textElement.InnerHTML)
@@ -221,38 +377,30 @@ func (e Element) GetText() string {
 
 func (e Element) EqualTo(e2 Element) bool {
 	if e.ElementName != e2.ElementName {
-		fmt.Println("EqualTo fails on `ElementName`")
 		return false
 	}
 	if e.IsVoid != e2.IsVoid {
-		fmt.Println("EqualTo fails on `IsVoid`")
 		return false
 	}
 	if e.IsClose != e2.IsClose {
-		fmt.Println("EqualTo fails on `IsClose`")
 		return false
 	}
 	if e.InnerHTML != e2.InnerHTML {
-		fmt.Println("EqualTo fails on `InnerHTML`")
 		return false
 	}
 	if len(e.Children) != len(e2.Children) {
-		fmt.Println("EqualTo fails on `len(Children)`")
 		return false
 	}
 	if len(e.Attributes) != len(e2.Attributes) {
-		fmt.Println("EqualTo fails on `len(Attributes)`")
 		return false
 	}
 	if !reflect.DeepEqual(e.Attributes, e2.Attributes) {
-		fmt.Println("EqualTo fails on `DeepEqual(Attributes)`")
 		return false
 	}
 	for index := 0; index < len(e.Children); index++ {
 		childA := e.Children[index]
 		childB := e2.Children[index]
 		if !childA.EqualTo(childB) {
-			fmt.Println("EqualTo fails on `DeepEqual(Children)`")
 			return false
 		}
 	}
@@ -313,7 +461,6 @@ func (e Element) Render() string {
 }
 
 func (e Element) renderImpl(nesting int) string {
-
 	str := tabSequence(nesting) + e.ToString()
 
 	str = str + "\n"
@@ -519,6 +666,7 @@ func readTag(text []rune, cursor *int) (*Element, error) {
 
 	attr_name := EMPTY
 	attr_value := EMPTY
+	element_name := EMPTY
 	const quote_double = rune('"')
 	const quote_single = rune('\'')
 
@@ -541,22 +689,25 @@ func readTag(text []rune, cursor *int) (*Element, error) {
 				elem.IsClose = true
 			} else if c == '>' {
 				*cursor = *cursor + 1
+				elem.ElementName = strings.ToLower(element_name)
+				elem.IsVoid = elem.IsVoid || isKnownVoidElement(elem.ElementName)
 				return &elem, errors.New("Empty tag similar to `<>` or `< >` or `</>`")
 			} else if !isWhitespace(c) {
 				state = 10
-				elem.ElementName = elem.ElementName + string(c)
+				element_name = element_name + string(c)
 			} //else is whitespace, keep going
 			break
 		case 2: //read until end of tag
 			if c == '/' {
 				elem.IsVoid = true
 			} else if c == '>' {
+				elem.ElementName = strings.ToLower(element_name)
 				elem.IsVoid = elem.IsVoid || isKnownVoidElement(elem.ElementName)
 				*cursor = *cursor + 1
 				return &elem, nil
 			} else if !isWhitespace(c) {
 				state = 100
-				elem.ElementName = elem.ElementName + string(c)
+				element_name = element_name + string(c)
 			}
 			break
 		case 3: //possible xml comment
@@ -569,10 +720,12 @@ func readTag(text []rune, cursor *int) (*Element, error) {
 			break
 		case 4:
 			if c == '-' {
+				element_name = ELEMENT_INTERNAL_XML_COMMENT
 				elem.IsComment = true
 				state = 200 //consume xml comment
 			} else {
 				*cursor = *cursor + 1
+				elem.ElementName = strings.ToLower(element_name)
 				return &elem, errors.New("Almost an XML comment but not quite.")
 			}
 			break
@@ -582,23 +735,27 @@ func readTag(text []rune, cursor *int) (*Element, error) {
 			} else if c == '-' {
 				state = 11
 			} else if c == '>' {
+				elem.ElementName = strings.ToLower(element_name)
 				elem.IsVoid = elem.IsVoid || isKnownVoidElement(elem.ElementName)
 				*cursor = *cursor + 1
 				return &elem, nil
 			} else if c == '/' {
 				elem.IsVoid = true
 				*cursor = *cursor + 1
+				elem.ElementName = strings.ToLower(element_name)
 				return &elem, nil
 			} else {
-				elem.ElementName = elem.ElementName + string(c)
+				element_name = element_name + string(c)
 			}
 			break
-		case 20: //read until attribute or end of tag
+		case 20: //read until attribute or end of tags
 			if c == '/' {
 				elem.IsVoid = true
 				*cursor = *cursor + 1
+				elem.ElementName = strings.ToLower(element_name)
 				return &elem, nil
 			} else if c == '>' {
+				elem.ElementName = strings.ToLower(element_name)
 				elem.IsVoid = elem.IsVoid || isKnownVoidElement(elem.ElementName)
 				*cursor = *cursor + 1
 				return &elem, nil
@@ -608,14 +765,14 @@ func readTag(text []rune, cursor *int) (*Element, error) {
 			}
 			break
 		case 100: //read attribute name
-			if c == '=' {
+			if c == '=' { //we are assigning an attribute value ...
 				state = 101
 			} else if c == '>' || c == '/' {
-				elem.Attributes[strings.ToLower(attr_name)] = ""
+				elem.Attributes[strings.ToLower(attr_name)] = EMPTY
 				*cursor = *cursor - 1
 				state = 20
 			} else if isWhitespace(c) {
-				elem.Attributes[strings.ToLower(attr_name)] = ""
+				elem.Attributes[strings.ToLower(attr_name)] = EMPTY
 				attr_name = ""
 				attr_value = ""
 				state = 20
@@ -652,7 +809,7 @@ func readTag(text []rune, cursor *int) (*Element, error) {
 			}
 			break
 		case 200:
-			elem.ElementName = "XML COMMENT"
+			elem.ElementName = ELEMENT_INTERNAL_XML_COMMENT
 			elem.IsComment = true
 			if c == '-' {
 				state = 201
@@ -671,12 +828,14 @@ func readTag(text []rune, cursor *int) (*Element, error) {
 		case 202:
 			if c == '>' {
 				*cursor = *cursor + 1
+				elem.ElementName = strings.ToLower(element_name)
 				return &elem, nil
 			}
 			break
 		}
 	}
 
+	elem.ElementName = strings.ToLower(element_name)
 	elem.IsVoid = elem.IsVoid || isKnownVoidElement(elem.ElementName)
 	return &elem, nil
 }
