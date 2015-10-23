@@ -415,6 +415,24 @@ func TestGetInnerText(t *testing.T) {
 		t.Errorf("GetInnerText() produced the wrong text: %s", text)
 		t.FailNow()
 	}
+
+	h1s := document.GetElementsByTagName(ELEMENT_H1)
+	if len(h1s) == 0 {
+		t.Errorf("No h1s")
+		t.FailNow()
+	}
+
+	h1 := h1s[0]
+	non_text := h1.NonTextChildren()
+	if len(non_text) != 0 {
+		t.Error("NonTextChildren wrong")
+		t.FailNow()
+	}
+
+	if len(h1.Children) == 0 {
+		t.Error("h1 has no children")
+		t.FailNow()
+	}
 }
 
 func readFileContents(filename string) string {

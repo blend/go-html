@@ -511,7 +511,9 @@ func (e Element) ToString() string {
 func (e Element) NonTextChildren() []Element {
 	elems := []Element{}
 	for _, c := range e.Children {
-		elems = append(elems, c)
+		if !c.IsText {
+			elems = append(elems, c)
+		}
 	}
 	return elems
 }
