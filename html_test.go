@@ -130,7 +130,7 @@ func TestParsingMocks(t *testing.T) {
 
 	for _, mock_file := range mock_files {
 		corpus := readFileContents("mocks/" + mock_file)
-		doc, parseError := Parse(corpus)
+		_, parseError := Parse(corpus)
 
 		if parseError != nil {
 			t.Errorf("error with %s: %s", mock_file, parseError.Error())
