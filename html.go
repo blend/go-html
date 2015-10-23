@@ -369,17 +369,15 @@ func (e Element) GetElementById(id string) *Element {
 	return nil
 }
 
+/* eventually ...
 func (e Element) QueryXpath(xpathQuery string) ([]Element, error) {
-	//lex xpath query
-	//chomp each token
-	//build into result list
-	//... profit?
 	return []Element{}, nil
 }
 
 func (e Element) QuerySelector(cssSelectorQuery string) ([]Element, error) {
 	return []Element{}, nil
 }
+*/
 
 func (e Element) GetText() string {
 	textElements := e.GetElementsByTagName(ELEMENT_INTERNAL_TEXT)
