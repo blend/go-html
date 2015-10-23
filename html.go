@@ -42,7 +42,7 @@ func parseChildren(parentElement *Element, body []rune, cursor *int, tagStack *e
 		return nil
 	}
 
-	//parse_start := *cursor
+	parse_start := *cursor
 	for *cursor < len(body) {
 		results, results_err := readUntilTag(body, cursor)
 		if results_err != nil {
@@ -63,7 +63,7 @@ func parseChildren(parentElement *Element, body []rune, cursor *int, tagStack *e
 			expected_tag := tagStack.Peek()
 			if expected_tag.ElementName == read_tag.ElementName {
 				tagStack.Pop()
-				//parentElement.InnerHTML = string(body[parse_start:*cursor])
+				parentElement.InnerHTML = string(body[parse_start:*cursor])
 				return nil
 			} else if shouldCheckElementStack {
 				error_text := fmt.Sprintf("unexpected close </%s> (expected </%s>) on line: %d", read_tag.ElementName, expected_tag.ElementName, countNewlinesBefore(string(body), *cursor))
@@ -98,7 +98,7 @@ func parseChildren(parentElement *Element, body []rune, cursor *int, tagStack *e
 			}
 		}
 	}
-	//parentElement.InnerHTML = string(body[parse_start:*cursor])
+	parentElement.InnerHTML = string(body[parse_start:*cursor])
 	return nil
 }
 
